@@ -65,16 +65,19 @@ library LibDiamond {
                               ERC20 STORAGE
     //////////////////////////////////////////////////////////////*/
 
-        uint256 totalSupply;
-        mapping(address => uint256) balanceOf;
-        mapping(address => mapping(address => uint256)) allowance;
+        //ERC721 storage
+        mapping(uint256 => address) _ownerOf;
+        mapping(address => uint256) _balanceOf;
+        /*//////////////////////////////////////////////////////////////
+                         ERC721 APPROVAL STORAGE
+    //////////////////////////////////////////////////////////////*/
+
+        mapping(uint256 => address) getApproved;
+        mapping(address => mapping(address => bool)) isApprovedForAll;
         /*//////////////////////////////////////////////////////////////
                             EIP-2612 STORAGE
     //////////////////////////////////////////////////////////////*/
 
-        //ERC721 storage
-        string baseURI;
-        uint256 currentTokenId;
         /*//////////////////////////////////////////////////////////////
                               MarketPlace STORAGE
     //////////////////////////////////////////////////////////////*/
@@ -108,15 +111,10 @@ library LibDiamond {
         emit OwnershipTransferred(previousOwner, _newOwner);
     }
 
-    function setJoeTokens(string memory _name, string memory _symbol) internal {
+    function setJoeNFT(string memory _name, string memory _symbol) internal {
         DiamondStorage storage ds = diamondStorage();
         ds.name = _name;
         ds.symbol = _symbol;
-    }
-
-    function setNFT(string memory _baseURI) internal {
-        DiamondStorage storage ds = diamondStorage();
-        ds.baseURI = _baseURI;
     }
 
     function setNFTMarketPlace() public pure {

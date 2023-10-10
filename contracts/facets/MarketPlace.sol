@@ -6,11 +6,11 @@ import {Utils} from "../libraries/marketPlaceUtils.sol";
 import {LibDiamond} from "../libraries/LibDiamond.sol";
 
 contract MarketPlace {
-    event NFTSold(uint256 indexed orderId, Order);
+    event NFTSold(uint256 indexed orderId, LibDiamond.Order);
 
-    event NFTListed(uint256 indexed orderId, Order);
+    event NFTListed(uint256 indexed orderId, LibDiamond.Order);
 
-    event NFTOrderEdited(uint indexed orderId, Order);
+    event NFTOrderEdited(uint indexed orderId, LibDiamond.Order);
 
     struct Order {
         address owner;
@@ -32,6 +32,11 @@ contract MarketPlace {
         bytes memory _signature
     ) public returns (uint _orderId) {
         LibDiamond.DiamondStorage storage ds = LibDiamond.diamondStorage();
+        ds.orderId++;
+
+        LibDiamond.Order storage newOrder = LibDiamond
+            .diamondStorage()
+            .allOrders[ds.orderId];
 
         //checks that the seller is the owner of the nft
         require(
@@ -44,9 +49,6 @@ contract MarketPlace {
             ERC721(_tokenAddress).getApproved(_tokenId) == address(this),
             "Please approve NFT to be sold"
         );
-
-        //checks that token address is not an EOA
-        // require(_tokenAddress.code.length > 0, "Token address is an EOA");
 
         //require that price is greater than zero
         require(_price != 0, "Price must be greater than zero");
@@ -72,8 +74,6 @@ contract MarketPlace {
         );
         require(isVerified, "Invalid Signature");
 
-        ds.orderId++;
-        Order storage newOrder = ds.allOrders[ds.orderId];
         newOrder.owner = msg.sender;
         newOrder.signature = _signature;
         newOrder.tokenId = _tokenId;
@@ -89,8 +89,11 @@ contract MarketPlace {
     }
 
     function buyNFT(uint _orderId) public payable {
+        LibDiamond.Order storage order = LibDiamond.diamondStorage().allOrders[
+            _orderId
+        ];
         LibDiamond.DiamondStorage storage ds = LibDiamond.diamondStorage();
-        Order storage order = ds.allOrders[_orderId];
+
         address owner = order.owner;
         address tokenAddress = order.tokenAddress;
         uint tokenId = order.tokenId;
@@ -115,11 +118,15 @@ contract MarketPlace {
     }
 
     // add getter for listing
-    function getOrder(uint256 _orderId) public view returns (Order memory) {
-        LibDiamond.DiamondStorage storage ds = LibDiamond.diamondStorage();
+    function getOrder(
+        uint256 _orderId
+    ) public view returns (LibDiamond.Order memory) {
+        LibDiamond.Order storage order = LibDiamond.diamondStorage().allOrders[
+            _orderId
+        ];
 
         // if (_listingId >= listingId)
-        return ds.allOrders[_orderId];
+        return order;
     }
 
     function editOrder(
@@ -128,8 +135,11 @@ contract MarketPlace {
         bool _active
     ) public {
         LibDiamond.DiamondStorage storage ds = LibDiamond.diamondStorage();
+        LibDiamond.Order storage _order = LibDiamond.diamondStorage().allOrders[
+            _orderId
+        ];
+
         require(_orderId <= ds.orderId, "Order Doesn't Exist");
-        Order storage _order = ds.allOrders[_orderId];
         require(_order.owner == msg.sender, "Not Owner");
         _order.nftPrice = _newPrice;
         _order.active = _active;

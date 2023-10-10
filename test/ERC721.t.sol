@@ -5,9 +5,8 @@ import "../contracts/interfaces/IDiamondCut.sol";
 import "../contracts/facets/DiamondCutFacet.sol";
 import "../contracts/facets/DiamondLoupeFacet.sol";
 import "../contracts/facets/OwnershipFacet.sol";
-import "../contracts/facets/JoeTokenFacet.sol";
 import "../contracts/Diamond.sol";
-import "../contracts/facets/NFT.sol";
+import "../contracts/facets/NFTFacet.sol";
 
 import "./helpers/DiamondUtils.sol";
 
@@ -17,8 +16,7 @@ contract DiamondDeployer is DiamondUtils, IDiamondCut {
     DiamondCutFacet dCutFacet;
     DiamondLoupeFacet dLoupe;
     OwnershipFacet ownerF;
-    JoeTokenFacet tokenF;
-    NFT nftF;
+    NFTFacet nftF;
 
     function setUp() public {
         //deploy facets
@@ -26,18 +24,17 @@ contract DiamondDeployer is DiamondUtils, IDiamondCut {
         diamond = new Diamond(
             address(this),
             address(dCutFacet),
-            "Joe Tokens",
+            "Joe NFT",
             "JOE"
-            "nftURI"
         );
         dLoupe = new DiamondLoupeFacet();
+        nftF = new NFTFacet();
         ownerF = new OwnershipFacet();
-        tokenF = new JoeTokenFacet(18);
 
         //upgrade diamond with facets
 
         //build cut struct
-        FacetCut[] memory cut = new FacetCut[](4);
+        FacetCut[] memory cut = new FacetCut[](3);
 
         cut[0] = (
             FacetCut({
@@ -56,16 +53,9 @@ contract DiamondDeployer is DiamondUtils, IDiamondCut {
         );
         cut[2] = (
             FacetCut({
-                facetAddress: address(tokenF),
+                facetAddress: address(nftF),
                 action: FacetCutAction.Add,
-                functionSelectors: generateSelectors("JoeTokenFacet")
-            })
-        );
-        cut[3] = (
-            FacetCut({
-                facetAddress: address(tokenF),
-                action: FacetCutAction.Add,
-                functionSelectors: generateSelectors("NFT")
+                functionSelectors: generateSelectors("NFTFacet")
             })
         );
 
@@ -77,55 +67,40 @@ contract DiamondDeployer is DiamondUtils, IDiamondCut {
     }
 
     function testNameAndSymbol() public {
-        string memory name = JoeTokenFacet(address(diamond)).name();
-        string memory symbol = JoeTokenFacet(address(diamond)).symbol();
+        string memory name = NFTFacet(address(diamond)).name();
+        string memory symbol = NFTFacet(address(diamond)).symbol();
 
-        assertEq(name, "Joe Tokens");
+        assertEq(name, "Joe NFT");
         assertEq(symbol, "JOE");
     }
 
     function testMint() public {
-        vm.startPrank(address(this));
-        JoeTokenFacet(address(diamond)).mint(address(0x11), 100e18);
-        uint bal = JoeTokenFacet(address(diamond)).balanceOf(address(0x11));
-        assertEq(bal, 100e18);
+        NFTFacet(address(diamond)).mintNFT(address(this), 1);
+        address owner = NFTFacet(address(diamond)).ownerOf(1);
+        assertEq(owner, address(this));
     }
 
-    function testTransfer() public {
-        vm.startPrank(address(this));
-        JoeTokenFacet(address(diamond)).mint(address(this), 100e18);
-        JoeTokenFacet(address(diamond)).transfer(address(0x11), 10e18);
-        uint bal = JoeTokenFacet(address(diamond)).balanceOf(address(0x11));
-        assertEq(bal, 10e18);
+    function testBalanceOf() public {
+        vm.startPrank(address(0x11));
+        NFTFacet(address(diamond)).mintNFT(address(0x11), 1);
+        uint bal = NFTFacet(address(diamond)).balanceOf(address(0x11));
+        assertGt(bal, 0);
     }
 
     function testTransferFrom() public {
         vm.startPrank(address(this));
-        JoeTokenFacet(address(diamond)).mint(address(this), 1000e18);
-        JoeTokenFacet(address(diamond)).approve(address(0x11), 100e18);
+        NFTFacet(address(diamond)).mintNFT(address(this), 1);
+        NFTFacet(address(diamond)).approve(address(0x11), 1);
         vm.stopPrank();
 
         vm.startPrank(address(0x11));
-        JoeTokenFacet(address(diamond)).transferFrom(
+        NFTFacet(address(diamond)).transferFrom(
             address(this),
             address(0x22),
-            10e18
+            1
         );
-        uint bal = JoeTokenFacet(address(diamond)).balanceOf(address(0x22));
-        assertEq(bal, 10e18);
-
-        //check allowance of spender
-        uint allowance = JoeTokenFacet(address(diamond)).allowance(
-            address(this),
-            address(0x11)
-        );
-        assertEq(allowance, 90e18);
-    }
-
-    function testMint() public {
-        NFT(address(diamond)).mintTo();
-        address owner = NFT(address(diamond)).ownerOf();
-        assertEq(owner, address(this));
+        address owner = NFTFacet(address(diamond)).ownerOf(1);
+        assertEq(owner, address(0x22));
     }
 
     function diamondCut(
