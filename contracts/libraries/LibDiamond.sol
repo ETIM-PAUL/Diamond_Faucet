@@ -114,17 +114,13 @@ library LibDiamond {
         ds.symbol = _symbol;
     }
 
-    function setNFT() internal {
+    function setNFT(string memory _baseURI) internal {
         DiamondStorage storage ds = diamondStorage();
-        ds.baseURI = baseURI;
-        ds.currentTokenId = currentTokenId;
+        ds.baseURI = _baseURI;
     }
 
-    function setNFTMarketPlace() public {
+    function setNFTMarketPlace() public pure {
         DiamondStorage storage ds = diamondStorage();
-        ds.nonces = nonces;
-        ds.allOrders = allOrders;
-        ds.orderId = orderId;
     }
 
     function contractOwner() internal view returns (address contractOwner_) {

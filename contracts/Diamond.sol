@@ -16,10 +16,12 @@ contract Diamond {
         address _contractOwner,
         address _diamondCutFacet,
         string memory _name,
-        string memory _symbol
+        string memory _symbol,
+        string memory _baseURI
     ) payable {
         LibDiamond.setContractOwner(_contractOwner);
         LibDiamond.setJoeTokens(_name, _symbol);
+        LibDiamond.setNFT(_baseURI);
 
         // Add the diamondCut external function from the diamondCutFacet
         IDiamondCut.FacetCut[] memory cut = new IDiamondCut.FacetCut[](1);

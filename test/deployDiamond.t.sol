@@ -7,6 +7,7 @@ import "../contracts/facets/DiamondLoupeFacet.sol";
 import "../contracts/facets/OwnershipFacet.sol";
 import "../contracts/facets/JoeTokenFacet.sol";
 import "../contracts/Diamond.sol";
+import "../contracts/facets/NFT.sol";
 
 import "./helpers/DiamondUtils.sol";
 
@@ -17,6 +18,7 @@ contract DiamondDeployer is DiamondUtils, IDiamondCut {
     DiamondLoupeFacet dLoupe;
     OwnershipFacet ownerF;
     JoeTokenFacet tokenF;
+    NFT nftF;
 
     function setUp() public {
         //deploy facets
@@ -26,6 +28,7 @@ contract DiamondDeployer is DiamondUtils, IDiamondCut {
             address(dCutFacet),
             "Joe Tokens",
             "JOE"
+            "nftURI"
         );
         dLoupe = new DiamondLoupeFacet();
         ownerF = new OwnershipFacet();
@@ -34,7 +37,7 @@ contract DiamondDeployer is DiamondUtils, IDiamondCut {
         //upgrade diamond with facets
 
         //build cut struct
-        FacetCut[] memory cut = new FacetCut[](3);
+        FacetCut[] memory cut = new FacetCut[](4);
 
         cut[0] = (
             FacetCut({
@@ -56,6 +59,13 @@ contract DiamondDeployer is DiamondUtils, IDiamondCut {
                 facetAddress: address(tokenF),
                 action: FacetCutAction.Add,
                 functionSelectors: generateSelectors("JoeTokenFacet")
+            })
+        );
+        cut[3] = (
+            FacetCut({
+                facetAddress: address(tokenF),
+                action: FacetCutAction.Add,
+                functionSelectors: generateSelectors("NFT")
             })
         );
 
@@ -110,6 +120,12 @@ contract DiamondDeployer is DiamondUtils, IDiamondCut {
             address(0x11)
         );
         assertEq(allowance, 90e18);
+    }
+
+    function testMint() public {
+        NFT(address(diamond)).mintTo();
+        address owner = NFT(address(diamond)).ownerOf();
+        assertEq(owner, address(this));
     }
 
     function diamondCut(
